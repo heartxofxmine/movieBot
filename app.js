@@ -1,9 +1,18 @@
 var builder = require('botbuilder');
 var restify = require('restify');
+var mdb = require('moviedb')('15c8e7b002396f54915987483a51d4ca');
 
 // Setup Restify Server
 var server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, function () {
+    function successCB(data) {
+        console.log("Success callback: " + data);
+    };
+
+    function errorCB(data) {
+        console.log("Error callback: " + data);
+    };
+
     console.log('%s listening to %s', server.name, server.url);
 });
 
@@ -19,6 +28,9 @@ var bot = new builder.UniversalBot(connector);
 var Hotels = require('./hotels');
 var Nope = require('./nope');
 var Support = require('./support');
+
+// Globals
+var movies = [];
 
 // Setup dialogs
 bot.dialog('nope', Nope.Dialog);
@@ -39,15 +51,40 @@ bot.dialog('/', new builder.IntentDialog()
     ])
     .onDefault([
         function (session) {
+            //mdb.searchMovie({query: 'Pirates' }, function(data, res){
+            var randId = Math.floor(Math.random() * (19 - 0) + 0);
+            mdb.personMovieCredits({ id: 85 }, function (err, results) {
+                var randMovie = Math.floor(Math.random() * (results.cast.length - 0) + 0);
+                var newmovie = results.cast[randMovie].title;
+                console.log(results.cast);
+                console.log(results.cast.length);
+                console.log('Another movie is ' + newmovie);
+            });
+            mdb.miscTopRatedMovies(function (err, res) {
+                var TopMoviesPgs = res.total_pages;
+                var randPg = Math.floor(Math.random() * (TopMoviesPgs - 0) + 0);
+                mdb.miscTopRatedMovies({ page: randPg }, function (err, res) {
+                    console.log(res);
+                    movies = res.results;
+                    builder.Prompts.choice(
+                        session,
+                        'May I suggest ' + movies[randId].title + '?',
+                        [Nope.Label, Hotels.Label],
+                        {
+                            maxRetries: 3,
+                            retryPrompt: 'Not a valid option'
+                        });
+                })
+            });
+            mdb.searchPerson({ query: 'Orlando Bloom' }, function (data, res) {
+                console.log(res.results);
+                console.log(res.results[0].id);
+            });
             // prompt for search option
-            builder.Prompts.choice(
-                session,
-                'Can I help you pick a movie?',
-                [Nope.Label, Hotels.Label],
-                {
-                    maxRetries: 3,
-                    retryPrompt: 'Not a valid option'
-                });
+            session.send('Hi there! I\'m a movie suggestion bot - here to \
+            help you pick a movie to watch without wasting time searching \
+            to choose one! With time I can learn your preferences and will \
+            broaden searches!');
         },
         function (session, result) {
             if (!result.response) {
