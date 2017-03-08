@@ -18,8 +18,8 @@ server.listen(process.env.port || process.env.PORT || 3978, function () {
 
 // Create chat bot and listen to messages
 var connector = new builder.ChatConnector({
-    appId: '', //process.env.MICROSOFT_APP_ID,
-    appPassword: '', //process.env.MICROSOFT_APP_PASSWORD
+    appId: '5a48ab3a-ed90-40f9-b8ff-03168d26658c', //process.env.MICROSOFT_APP_ID,
+    appPassword: 'BAb8Tn6Ns9AMo8mdarj3Sgd', //process.env.MICROSOFT_APP_PASSWORD
 });
 server.post('/api/messages', connector.listen());
 var bot = new builder.UniversalBot(connector);
@@ -31,6 +31,7 @@ var Support = require('./support');
 
 // Globals
 var movies = [];
+var base_image_uri = 'https://image.tmdb.org/t/p/w185_and_h278_bestv2';
 
 // Setup dialogs
 bot.dialog('nope', Nope.Dialog);
@@ -63,6 +64,7 @@ bot.dialog('/', new builder.IntentDialog()
             mdb.miscTopRatedMovies(function (err, res) {
                 var TopMoviesPgs = res.total_pages;
                 var randPg = Math.floor(Math.random() * (TopMoviesPgs - 0) + 0);
+                //Embedding because the movie_pages in res changes, so want to make sure the RandPg is always in scope
                 mdb.miscTopRatedMovies({ page: randPg }, function (err, res) {
                     console.log(res);
                     movies = res.results;
@@ -74,11 +76,20 @@ bot.dialog('/', new builder.IntentDialog()
                             maxRetries: 3,
                             retryPrompt: 'Not a valid option'
                         });
+                        var moviePhotoPath = movies[randId].poster_path;
+                        var msg = new builder.Message(session)
+                            .attachments([{
+                                contentType: "image/jpeg",
+                                contentUrl: base_image_uri + moviePhotoPath
+                            }]);
+                        session.send(msg); 
                 })
             });
-            mdb.searchPerson({ query: 'Orlando Bloom' }, function (data, res) {
+            mdb.searchPerson({ query: 'Cate Blanchet' }, function (data, res) {
                 console.log(res.results);
                 console.log(res.results[0].id);
+                var actorPhotoPath = res.results[0].profile_path;
+                console.log(base_image_uri + actorPhotoPath);
             });
             // prompt for search option
             session.send('Hi there! I\'m a movie suggestion bot - here to \
