@@ -1,6 +1,8 @@
 var builder = require('botbuilder');
 var restify = require('restify');
 var mdb = require('moviedb')('15c8e7b002396f54915987483a51d4ca');
+var omdb = require("./lib/omdbMovieInfo.js")
+var r = require('request');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -18,8 +20,8 @@ server.listen(process.env.port || process.env.PORT || 3978, function () {
 
 // Create chat bot and listen to messages
 var connector = new builder.ChatConnector({
-    appId: '5a48ab3a-ed90-40f9-b8ff-03168d26658c', //process.env.MICROSOFT_APP_ID,
-    appPassword: 'BAb8Tn6Ns9AMo8mdarj3Sgd', //process.env.MICROSOFT_APP_PASSWORD
+    appId: '', //process.env.MICROSOFT_APP_ID, 
+    appPassword: '' //process.env.MICROSOFT_APP_PASSWORD
 });
 server.post('/api/messages', connector.listen());
 var bot = new builder.UniversalBot(connector);
@@ -66,8 +68,62 @@ bot.dialog('/', new builder.IntentDialog()
                 var randPg = Math.floor(Math.random() * (TopMoviesPgs - 0) + 0);
                 //Embedding because the movie_pages in res changes, so want to make sure the RandPg is always in scope
                 mdb.miscTopRatedMovies({ page: randPg }, function (err, res) {
-                    console.log(res);
-                    movies = res.results;
+                    //console.log(res);
+                    var movies = res.results;
+                    var movieTitle = movies[randId].title;
+                    var moviePhotoPath = movies[randId].poster_path;
+                    var moviePlot = movies[randId].overview;
+
+                    var omdbCall = function(title, done){
+                        var query = { 
+                            "t": title,
+                            "r": "json"
+                        };
+                        var opts = {
+                            url: "http://www.omdbapi.com/",
+                            qs: query
+                        }
+                        r(opts, function (err, resp, body) {
+                            if (err) { console.log(err); return; }
+                            var bodyObject = JSON.parse(resp.body);
+                            
+                            var omdbDetails = {
+                                Director: bodyObject.Director,
+                                Year: bodyObject.Year,
+                                Actors: bodyObject.Actors,
+                                imdbID: bodyObject.imdbID,
+                                Rating: bodyObject.imdbRating,
+                                Genres: bodyObject.Genre
+                            }
+                            done(omdbDetails);
+                        });
+                    };
+
+                    //Once the above function is done, then this function can be called, ensuring this function isn't called before
+                    omdbCall(movieTitle, function(omdbDetails) {
+                        console.dir(omdbDetails);
+                        var suggest = new builder.Message(session)
+                            .attachments([
+                                //You can't make a hero card itself, it needs to be as part of an attachment
+                                new builder.HeroCard(session)
+                                    .title('May I suggest ' + movieTitle + '?')
+                                    .subtitle(omdbDetails.Year + ' | ' + omdbDetails.Genres + ' | ' + omdbDetails.Rating + '/10' )
+                                    .text(moviePlot)
+                                    .images([
+                                        builder.CardImage.create(session, base_image_uri + moviePhotoPath)
+                                    ])
+                                    .buttons([
+                                        builder.CardAction.openUrl(session, 'https://docs.botframework.com/en-us/', 'Sure, where can I watch it?'),
+                                        builder.CardAction.openUrl(session, 'https://docs.botframework.com/en-us/', 'No thanks, suggest another'),
+                                        builder.CardAction.openUrl(session, 'https://docs.botframework.com/en-us/', 'What\'s the summary?'),
+                                        builder.CardAction.openUrl(session, 'https://docs.botframework.com/en-us/', 'Who\'s in it?')
+                                    ])
+                            ]);
+                        session.send(suggest);
+                    });
+                    
+
+/*                  session.send('May I suggest ' + movies[randId].title + '?');  
                     builder.Prompts.choice(
                         session,
                         'May I suggest ' + movies[randId].title + '?',
@@ -76,13 +132,14 @@ bot.dialog('/', new builder.IntentDialog()
                             maxRetries: 3,
                             retryPrompt: 'Not a valid option'
                         });
-                        var moviePhotoPath = movies[randId].poster_path;
-                        var msg = new builder.Message(session)
-                            .attachments([{
-                                contentType: "image/jpeg",
-                                contentUrl: base_image_uri + moviePhotoPath
-                            }]);
-                        session.send(msg); 
+                    var moviePhotoPath = movies[randId].poster_path;
+                    var  msg  =  new  builder.Message(session)
+                        .attachments([{
+                            contentType:  "image/jpeg",
+                            contentUrl:  base_image_uri + moviePhotoPath
+                        }]);
+                    session.send(msg);
+                    builder.Prompts.choice(session, "Which color?", ["red", "green", "blue"], {listStyle: builder.ListStyle.button});*/
                 })
             });
             mdb.searchPerson({ query: 'Cate Blanchet' }, function (data, res) {
