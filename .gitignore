@@ -3,6 +3,7 @@ logs
 *.log
 npm-debug.log*
 launch.json
+.env
 
 # Runtime data
 pids
