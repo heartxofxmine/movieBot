@@ -1,117 +1,110 @@
 var mdb = require('moviedb')('15c8e7b002396f54915987483a51d4ca');
 var omdb = require("./lib/omdbMovieInfo.js")
-var r = require('request');
+var guidebox = require('guidebox')(process.env.MOVIE_API_KEY)
+var request = require('request');
 
 //Globals
-var base_image_uri = 'https://image.tmdb.org/t/p/w185_and_h278_bestv2';
+var genresList = {
+    "Action/Adventure": [28, 12],
+    "Family/Animation/Music": [10751, 16, 10402],
+    "Comedy": [35],
+    "Documentary": [99],
+    "Drama": [18],
+    "History/War": [36, 10752],
+    "Romance": [10749],
+    "Sci-Fi/Fantasy": [878, 14],
+    "Thriller/Crime/Mystery/Horror": [53, 80, 9648, 27],
+    "Western": [37],
+}
+var selectedGenre = genresList["Action/Adventure"];
+var rand = selectedGenre[Math.floor(Math.random() * selectedGenre.length)];
 
-function getRandomMovie(done) {
-    mdb.miscTopRatedMovies(function (err, res) {
-        var TopMoviesPgs = res.total_pages;
-        var randPg = Math.floor(Math.random() * (TopMoviesPgs - 0) + 0);
-        var randId = Math.floor(Math.random() * (19 - 0) + 0);
-        //Embedding because the movie_pages in res changes, so want to make sure the RandPg is always in scope
-        mdb.miscTopRatedMovies({ page: randPg }, function (err, res) {
-            var movie = res.results[randId];
-            var movieDetails = {
-                Title: movie.title,
-                Poster: base_image_uri + movie.poster_path,
-                Plot: movie.overview
-            }
 
-            var query = {
-                "t": movieDetails.Title,
-                "r": "json"
-            };
-            var opts = {
-                url: "http://www.omdbapi.com/",
-                qs: query
-            }
+function movieDetails(movie, searchedBy, searchValue) {
+    var trailerLink = null;
+    if (movie.trailers.web.length > 0) {
+        trailerLink = movie.trailers.web[0].link;
+    }
 
-            r(opts, function (err, resp, body) {
-                if (err) { console.log(err); return; }
-                var bodyObject = JSON.parse(resp.body);
+    var Actors = [];
+    movie.cast.forEach(function(actor){
+        Actors.push(actor.name);
+    })
+    /*for (var i = 0; i<movie.cast.length; i++){
+        Actors.push(movie.cast[i].name);
+    };*/
 
-                movieDetails.Director = bodyObject.Director;
-                movieDetails.Year = bodyObject.Year;
-                movieDetails.Actors = bodyObject.Actors;
-                movieDetails.imdbID = bodyObject.imdbID;
-                movieDetails.Rating = bodyObject.imdbRating;
-                movieDetails.Genres = bodyObject.Genre;
+    var movieDetails = {
+        Title: movie.title,
+        Poster: movie.poster_120x171,
+        Plot: movie.overview,
+        Trailer: trailerLink,
+        Director: movie.directors[0].name,
+        Year: movie.release_year,
+        Actors: Actors.join(", "),
+        imdbID: movie.imdb,
+        Rating: movie.rating,
+        Genres: "Action",
 
-                done(movieDetails);
-            });
+        searchedBy: searchedBy,
+        searchValue: searchValue
+    }
+    return movieDetails;
+}
+
+function getRandomMovie() {
+    //new API gets query for top 70k+ movies
+    var totalResults;
+    return guidebox.movies.list({ limit: 1 })
+        .then(function (data) {
+            totalResults = data.total_results / 2;
+            //get the total_results, and randomly generate a number for the offset
+            var randOffset = Math.floor(Math.random() * (totalResults - 0) + 0);
+            //get that specific movie out of the main list
+            //This is resolving the "then" promise to the value I just specified
+            return randOffset;
+        }).then(function (randOffset) {
+            return guidebox.movies.list({ limit: 1, offset: randOffset });
+        }).then(function (data) {
+            var movie = data.results[0];
+            var randMovieID = movie.id;
+            return guidebox.movies.retrieve(randMovieID);
+        }).then(function (movie) {
+            return movieDetails(movie);
+        });
+};
+
+function getMovieByActor(actorName) {
+    //first need to get actor's ID by calling search.person
+    return guidebox.search.person({ query: actorName })
+        .then(function (data) {
+            var actorID = data.results[0].id;
+            //Use ID to pull up person.credits
+            return guidebox.person.credits(actorID, { role: 'cast' });
+        }).then(function (actorCredits) {
+            var res = actorCredits.results;
+            //Randomly generate a movie from their credits
+            var item = res[Math.floor(Math.random() * res.length)];
+            return guidebox.movies.retrieve(item.id);
+        }).then(function (movie) {
+            return movieDetails(movie, "actor", actorName);
         })
-    })
 };
 
-function movieDetails(movieID, done) {
-    mdb.movieInfo({ id: movieID }, function (data, res) {
-        var movieDetails = {
-            Title: res.title,
-            Poster: base_image_uri + res.poster_path,
-            Plot: res.overview,
-        }
 
-        var query = {
-            "t": movieDetails.Title,
-            "r": "json"
-        };
-        var opts = {
-            url: "http://www.omdbapi.com/",
-            qs: query
-        }
 
-        r(opts, function (err, resp, body) {
-            if (err) { console.log(err); return; }
-            var bodyObject = JSON.parse(resp.body);
 
-            movieDetails.Director = bodyObject.Director;
-            movieDetails.Year = bodyObject.Year;
-            movieDetails.Actors = bodyObject.Actors;
-            movieDetails.imdbID = bodyObject.imdbID;
-            movieDetails.Rating = bodyObject.imdbRating;
-            movieDetails.Genres = bodyObject.Genre;
 
-            done(movieDetails);
-        });
-    })
-};
 
-function getIDforActor(actorName, done) {
-    mdb.searchPerson({ query: actorName }, function (data, res) {
-        console.log(res.results);
-        var actorID = res.results[0].id;
-        var actorPhotoPath = res.results[0].profile_path;
-        var actorDetails = {
-            ID: res.results[0].id,
-            Photo: base_image_uri + res.results[0].profile_path,
-        }
-        //console.log(base_image_uri + actorPhotoPath);
-        done(actorID);
+//A way to make the API call without using the packaging that exists
+const getMovies = (callback) => {
+    request('http://api-public.guidebox.com/v2/movies?api_key=' + process.env.MOVIE_API_KEY, function (error, response, body) {
+        callback(error, response);
     });
-};
+}
 
-function getMovieByActor(actorName, done) {
-    getIDforActor(actorName, function (actorID) {
-        mdb.personMovieCredits({ id: actorID }, function (err, results) {
-            var randMovie = Math.floor(Math.random() * (results.cast.length - 0) + 0);
-            var movieID = results.cast[randMovie].id;
-/*            var newMovie = results.cast[randMovie].title;
-            console.log(results.cast);
-            console.log(results.cast.length);
-            console.log('Another movie is ' + newMovie);*/
-            movieDetails(movieID, function(movieDetails){
-                done(movieDetails);
-            });
-        });
-    });
-};
-
-
-function getMoviebyYear() {
-            mdb.discoverMovie
-        }
-
+exports.getMovies = getMovies;
 exports.getRandomMovie = getRandomMovie;
 exports.getMovieByActor = getMovieByActor;
+/*exports.getIDforActor = getIDforActor;
+exports.getMoviebyYear = getMoviebyYear;*/
