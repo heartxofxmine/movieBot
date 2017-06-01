@@ -1,5 +1,4 @@
 require('dotenv').config();
-
 var builder = require('botbuilder');
 var restify = require('restify');
 var apiHelper = require('./apiHelper.js');
@@ -35,13 +34,14 @@ bot.dialog('/', function (session) {
             help you pick a movie to watch without wasting time searching \
             to choose one! With time I can learn your preferences and will \
             broaden searches!');
-    
+
     apiHelper.getRandomMovie().then(function (moviedetails) {
         session.beginDialog("/Suggestion", moviedetails);
     });
-    
-    apiHelper.getMovies((error, response) => {
-        if(error) {
+
+    //Use this if the API call isn't working, as this directly calls
+    /*apiHelper.getMovies((error, response) => {
+        if (error) {
             session.send("error calling API " + error);
         } else if (response) {
             var JSONresponse = JSON.parse(response.body);
@@ -54,14 +54,14 @@ bot.dialog('/', function (session) {
         } else {
             session.send("Something went wrong");
         }
-    })
+    })*/
 });
 
 bot.dialog('/Suggestion',
     function (session, args) {
         if (args.libraryName === "*") {
-            apiHelper.getRandomMovie(function (moviedetails) {
-                session.replaceDialog("/Suggestion", moviedetails);
+            apiHelper.getRandomMovie().then(function (moviedetails) {
+                session.beginDialog("/Suggestion", moviedetails);
             });
         };
         moviedetails = args;
@@ -136,20 +136,20 @@ bot.dialog('/ActorSearch',
         apiHelper.getMovieByActor(actorName)
             .then(function (moviedetails) {
                 session.beginDialog("/Suggestion", moviedetails);
-            }).catch(function(reason){
-                session.send("Please remove your gloves, type again ;-)")
-                session.replaceDialog("/ActorSearch");   
-        });
-
-/*        apiHelper.getMovieByActor(actorName, function (movie) {
-            if (movie !== null) {
-                session.replaceDialog("/Suggestion", movie);
-            }
-            else {
+            }).catch(function (reason) {
                 session.send("Please remove your gloves, type again ;-)")
                 session.replaceDialog("/ActorSearch");
-            }
-        });*/
+            });
+
+        /*        apiHelper.getMovieByActor(actorName, function (movie) {
+                    if (movie !== null) {
+                        session.replaceDialog("/Suggestion", movie);
+                    }
+                    else {
+                        session.send("Please remove your gloves, type again ;-)")
+                        session.replaceDialog("/ActorSearch");
+                    }
+                });*/
     }]
 );
 
@@ -212,8 +212,16 @@ bot.dialog('/YearSearch',
     },
     function (session, results) {
         let movieYear = results.response;
-        console.log(movieYear);
-        apiHelper.getMoviebyYear(movieYear, function (movie) {
+        //console.log(movieYear);
+         apiHelper.getMoviebyYear(movieYear)
+            .then(function (moviedetails) {
+                session.beginDialog("/Suggestion", moviedetails);
+            }).catch(function (reason) {
+                session.send("Please make sure to give a 4-number year ;-)")
+                session.replaceDialog("/YearSearch");
+            });
+        
+ /*       apiHelper.getMoviebyYear(movieYear, function (movie) {
             if (movie !== null) {
                 session.replaceDialog("/Suggestion", movie);
             }
@@ -221,7 +229,7 @@ bot.dialog('/YearSearch',
                 session.send("Please make sure to give a 4-number year ;-)")
                 session.replaceDialog("/YearSearch");
             }
-        });
+        });*/
     }]
 );
 
@@ -230,28 +238,29 @@ var buildActorHeroList = function (session, myActors, done) {
     var list = [];
     for (var i = 0; i < myActors.length; i++) {
         let currActor = myActors[i];
-        apiHelper.getIDforActor(currActor, function (actorDetails) {
-            //session.send(actorDetails.Photo + " " + currActor);
-            list.push(
-                new builder.HeroCard(session)
-                    .title(currActor)
-                    .images([
-                        builder.CardImage.create(session, actorDetails.Photo)
-                    ])
-                    .buttons([
-                        builder.CardAction.dialogAction(session, "/ActorSearch", currActor, "Give me a movie with " + currActor)])
-            );
-            count++;
-            if (count >= myActors.length) {
-                done(list);
-            }
-        });
+        apiHelper.getActorByName(currActor)
+            .then(function (actorDetails) {
+                //session.send(actorDetails.Photo + " " + currActor);
+                list.push(
+                    new builder.HeroCard(session)
+                        .title(currActor)
+                        .images([
+                            builder.CardImage.create(session, actorDetails.Photo)
+                        ])
+                        .buttons([
+                            builder.CardAction.dialogAction(session, "/ActorSearch", currActor, "Give me a movie with " + currActor)])
+                );
+                count++;
+                if (count >= myActors.length) {
+                    done(list);
+                }
+            });
     }
 }
 
 bot.dialog('/ActorsinMovie',
     function (session, args) {
-        var myActors = moviedetails.Actors.split(", ");
+        var myActors = moviedetails.Actors; //could do .split(", ")
         buildActorHeroList(session, myActors, function (actorHeroCardList) {
 
             var actors = new builder.Message(session)
