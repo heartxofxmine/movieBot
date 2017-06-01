@@ -169,8 +169,8 @@ function getMoviebyYear(userYear, done) {
                             console.log(results.cast.length);
                             console.log('Another movie is ' + newMovie);*/
                 movieDetails(movieID, function (movieDetails) {
-                    movieDetails.searchedBy = "actor";
-                    movieDetails.searchValue = actorName;
+                    movieDetails.searchedBy = "year";
+                    movieDetails.searchValue = userYear;
                     done(movieDetails);
                 });
             }
