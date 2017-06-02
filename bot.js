@@ -165,19 +165,11 @@ bot.dialog('/GenreSearch',
                 next({ response: args.data });
             }
 
-            var genreButtons =
-                [
-                    builder.CardAction.dialogAction(session, "/", "actionadventure", "Acton/Adventure"),
-                    builder.CardAction.dialogAction(session, "/", null, "Family/Animation/Music"),
-                    builder.CardAction.dialogAction(session, "/", null, "Comedy"),
-                    builder.CardAction.dialogAction(session, "/", null, "Documentary"),
-                    builder.CardAction.dialogAction(session, "/", null, "Drama"),
-                    builder.CardAction.dialogAction(session, "/", null, "History/War"),
-                    builder.CardAction.dialogAction(session, "/", null, "Romance"),
-                    builder.CardAction.dialogAction(session, "/", null, "Sci-Fi/Fantasy"),
-                    builder.CardAction.dialogAction(session, "/", null, "Thriller/Crime/Mystery/Horror"),
-                    builder.CardAction.dialogAction(session, "/", null, "Western"),
-                ];
+            var genreButtons = [];
+            Object.keys(apiHelper.genresList).forEach(function (genre) {
+                genreButtons.push(builder.CardAction.postBack(session, genre, genre));
+            });
+
             var suggest = new builder.Message(session)
                 .attachments([
                     //You can't make a hero card itself, it needs to be as part of an attachment
@@ -188,18 +180,16 @@ bot.dialog('/GenreSearch',
         }
     },
     function (session, results) {
-        let movieYear = results.response;
-        apiHelper.getMovieByActor(movieYear, function (movie) {
-            /*if (movie !== null) {*/
-            session.replaceDialog("/Suggestion", movie);
-            /*}
-            else {
-                session.send("Please make sure to give a 4-number year ;-)")
-                session.replaceDialog("/YearSearch");
-            }*/
-        });
-    }]
-);
+        let genre = results.response;
+        apiHelper.getMoviebyGenre(genre)
+            .then(function (moviedetails) {
+                session.beginDialog("/Suggestion", moviedetails);
+            }).catch(function (reason) {
+                session.send("Please only select one of the above genres")
+                session.replaceDialog("/GenreSearch");
+            });
+    }
+    ]);
 
 bot.dialog('/YearSearch',
     [function (session, args, next) {
@@ -213,23 +203,23 @@ bot.dialog('/YearSearch',
     function (session, results) {
         let movieYear = results.response;
         //console.log(movieYear);
-         apiHelper.getMoviebyYear(movieYear)
+        apiHelper.getMoviebyYear(movieYear)
             .then(function (moviedetails) {
                 session.beginDialog("/Suggestion", moviedetails);
             }).catch(function (reason) {
                 session.send("Please make sure to give a 4-number year ;-)")
                 session.replaceDialog("/YearSearch");
             });
-        
- /*       apiHelper.getMoviebyYear(movieYear, function (movie) {
-            if (movie !== null) {
-                session.replaceDialog("/Suggestion", movie);
-            }
-            else {
-                session.send("Please make sure to give a 4-number year ;-)")
-                session.replaceDialog("/YearSearch");
-            }
-        });*/
+
+        /*       apiHelper.getMoviebyYear(movieYear, function (movie) {
+                   if (movie !== null) {
+                       session.replaceDialog("/Suggestion", movie);
+                   }
+                   else {
+                       session.send("Please make sure to give a 4-number year ;-)")
+                       session.replaceDialog("/YearSearch");
+                   }
+               });*/
     }]
 );
 

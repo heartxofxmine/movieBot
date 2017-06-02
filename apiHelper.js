@@ -16,8 +16,19 @@ var genresList = {
     "Thriller/Crime/Mystery/Horror": [53, 80, 9648, 27],
     "Western": [37],
 }
-var selectedGenre = genresList["Action/Adventure"];
-var rand = selectedGenre[Math.floor(Math.random() * selectedGenre.length)];
+
+var genresList2 = [
+    {
+        id: 1,
+        name: "Action/Adventure",
+        ids: [28, 12]
+    },
+    {
+        id: 2,
+        name: "Family/Animation/Music",
+        ids: [10751, 16, 10402]
+    }
+]
 
 
 function movieDetails(movie, searchedBy, searchValue) {
@@ -111,6 +122,7 @@ function getActorByName(actorName) {
         })
 };
 
+//wraps the callback from MDB into a promise
 function mdbDiscoverMovie(query) {
     return new Promise(function (resolve, reject) {
         mdb.discoverMovie(query, function (err, res) {
@@ -120,20 +132,45 @@ function mdbDiscoverMovie(query) {
         })
     })
 };
-function getMoviebyYear(userYear) {
-    return mdbDiscoverMovie({ year: userYear })
-       /* .then(function (res) {
-            var year = userYear;
-            console.log(res.results);
-            var yearPgs = res.total_pages;
-            var randPg = Math.floor(Math.random() * (yearPgs - 0) + 0);
-            return mdbDiscoverMovie({ year:year, page:randPg})
-        })*/
-        .then(function(res){
+
+function getMoviebyGenre(userGenre) {
+    var selectedGenre = genresList[userGenre];
+    var rand = selectedGenre[Math.floor(Math.random() * selectedGenre.length)];
+    return mdbDiscoverMovie({ with_genres: rand })
+        .then(function (res) {
+            var genre = rand;
+            var genrePgs = res.total_pages;
+            var randPg = Math.floor(Math.random() * (genrePgs - 0) + 0);
+            return mdbDiscoverMovie({ with_genres: rand, page: randPg })
+        }).then(function (res) {
             var randId = Math.floor(Math.random() * (19 - 0) + 0);
             var movieID = res.results[randId].id;
-            return guidebox.search.movies({field: 'id', id_type: 'themoviedb', query: movieID});
-        }).then(function(movie){
+            return guidebox.search.movies({ field: 'id', id_type: 'themoviedb', query: movieID });
+        }).then(function (movie) {
+            //console.log(movie);
+            var movieID = movie.id;
+            return guidebox.movies.retrieve(movieID);
+        }).then(function (movie) {
+            return movieDetails(movie);
+        })
+}
+//function works, even if the API isn't good at making a yearSearch
+function getMoviebyYear(userYear) {
+    return mdbDiscoverMovie({ year: userYear })
+        //Since the year function doesn't work all that well, diving into further 
+        //pages just skews it more for the time being
+        /* .then(function (res) {
+             var year = userYear;
+             console.log(res.results);
+             var yearPgs = res.total_pages;
+             var randPg = Math.floor(Math.random() * (yearPgs - 0) + 0);
+             return mdbDiscoverMovie({ year:year, page:randPg})
+         })*/
+        .then(function (res) {
+            var randId = Math.floor(Math.random() * (19 - 0) + 0);
+            var movieID = res.results[randId].id;
+            return guidebox.search.movies({ field: 'id', id_type: 'themoviedb', query: movieID });
+        }).then(function (movie) {
             //console.log(movie);
             var movieID = movie.id;
             return guidebox.movies.retrieve(movieID);
@@ -168,8 +205,6 @@ function getMoviebyYear(userYear) {
 
 */
 
-
-
 //A way to make the API call without using the packaging that exists
 /*const getMovies = (callback) => {
     request('http://api-public.guidebox.com/v2/movies?api_key=' + process.env.GUIDEBOX_API_KEY, function (error, response, body) {
@@ -182,3 +217,5 @@ exports.getRandomMovie = getRandomMovie;
 exports.getMovieByActor = getMovieByActor;
 exports.getActorByName = getActorByName;
 exports.getMoviebyYear = getMoviebyYear;
+exports.getMoviebyGenre = getMoviebyGenre;
+exports.genresList = genresList;
