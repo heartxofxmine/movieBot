@@ -63,41 +63,79 @@ bot.dialog('/Suggestion',
             apiHelper.getRandomMovie().then(function (moviedetails) {
                 session.beginDialog("/Suggestion", moviedetails);
             });
-        };
-        moviedetails = args;
-        session.send('May I suggest ' + moviedetails.Title + '?');
-        var dynamicButtons =
-            [
-                builder.CardAction.dialogAction(session, "/Yes", null, "Sure, where can I watch it? "),
-                builder.CardAction.dialogAction(session, "/Another", null, "No thanks, suggest another "),
-                builder.CardAction.dialogAction(session, "/ActorsinMovie", null, "Who\'s in it?"),
-                builder.CardAction.openUrl(session, moviedetails.Trailer, 'Watch the trailer')
-            ];
-        if (moviedetails.searchedBy === "actor") {
-            dynamicButtons.push(builder.CardAction.dialogAction(session, "/ActorSearch", moviedetails.searchValue, "Give me another with " + moviedetails.searchValue));
         }
-        if (moviedetails.searchedBy === "year") {
-            dynamicButtons.push(builder.CardAction.dialogAction(session, "/YearSearch", moviedetails.searchValue, "Give me another from " + moviedetails.searchValue));
-        }
-        var suggest = new builder.Message(session)
-            .attachments([
-                //You can't make a hero card itself, it needs to be as part of an attachment
-                new builder.ThumbnailCard(session)
-                    .title(moviedetails.Title)
-                    .subtitle(moviedetails.Year + ' | ' + moviedetails.Genres + ' | ' + moviedetails.Rating + '/10')
-                    .text(moviedetails.Plot)
-                    .images([
-                        builder.CardImage.create(session, moviedetails.Poster)
-                    ])
-                    .buttons(dynamicButtons)
+        //the Else makes sure that if there are no movie details, get some, and if there are some
+        //then run else. But only run else if the IF is false, being there are no moviedetails
+        else {
+            moviedetails = args;
+            session.send('May I suggest ' + moviedetails.Title + '?');
+            var dynamicButtons =
+                [
+                    builder.CardAction.dialogAction(session, "/Yes", null, "Sure, where can I watch it? "),
+                    builder.CardAction.dialogAction(session, "/Another", null, "No thanks, suggest another "),
+                    builder.CardAction.dialogAction(session, "/ActorsinMovie", null, "Who\'s in it?"),
+                    builder.CardAction.openUrl(session, moviedetails.Trailer, 'Watch the trailer')
+                ];
+            if (moviedetails.searchedBy === "actor") {
+                dynamicButtons.push(builder.CardAction.dialogAction(session, "/ActorSearch", moviedetails.searchValue, "Give me another with " + moviedetails.searchValue));
+            }
+            if (moviedetails.searchedBy === "year") {
+                dynamicButtons.push(builder.CardAction.dialogAction(session, "/YearSearch", moviedetails.searchValue, "Give me another from " + moviedetails.searchValue));
+            }
+            if (moviedetails.searchedBy === "genre") {
+                dynamicButtons.push(builder.CardAction.dialogAction(session, "/GenreSearch", moviedetails.searchValue, "Give me another " + moviedetails.searchValue + " movie"));
+            }
+            var suggest = new builder.Message(session)
+                .attachments([
+                    //You can't make a hero card itself, it needs to be as part of an attachment
+                    new builder.ThumbnailCard(session)
+                        .title(moviedetails.Title)
+                        .subtitle(moviedetails.Year + ' | ' + moviedetails.Genres + ' | ' + moviedetails.Rating + '/10')
+                        .text(moviedetails.Plot)
+                        .images([
+                            builder.CardImage.create(session, moviedetails.Poster)
+                        ])
+                        .buttons(dynamicButtons)
 
-            ]);
+                ]);
+        }
         session.send(suggest);
     });
 
 bot.dialog('/Yes',
     function (session, args) {
-        session.send("On Netflix only right now");
+        if (moviedetails.StreamSources === null && moviedetails.PaidSources === null) {
+            session.send("This movie actually isn't available to stream at the moment! Sorry for the tease!");
+        } else {
+            if (moviedetails.StreamSources.__proto__.__proto__ != null) {
+                session.send("You can stream the movie here:");
+                var StreamButtons = [];
+                Object.keys(moviedetails.StreamSources).forEach(function (source) {
+                    StreamButtons.push(builder.CardAction.openUrl(session, moviedetails.StreamSources[source], source));
+                });
+                var suggest = new builder.Message(session)
+                    .attachments([
+                        //You can't make a hero card itself, it needs to be as part of an attachment
+                        new builder.ThumbnailCard(session)
+                            .buttons(StreamButtons)
+                    ]);
+                session.send(suggest);
+            }
+            if (moviedetails.PaidSources != null) {
+                session.send("You can RENT the movie here:");
+                var PaidButtons = [];
+                Object.keys(moviedetails.PaidSources).forEach(function (source) {
+                    PaidButtons.push(builder.CardAction.openUrl(session, moviedetails.PaidSources[source], source));
+                });
+                var suggest = new builder.Message(session)
+                    .attachments([
+                        //You can't make a hero card itself, it needs to be as part of an attachment
+                        new builder.ThumbnailCard(session)
+                            .buttons(PaidButtons)
+                    ]);
+                session.send(suggest);
+            }
+        }
     }
 );
 

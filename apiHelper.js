@@ -17,19 +17,6 @@ var genresList = {
     "Western": [37],
 }
 
-var genresList2 = [
-    {
-        id: 1,
-        name: "Action/Adventure",
-        ids: [28, 12]
-    },
-    {
-        id: 2,
-        name: "Family/Animation/Music",
-        ids: [10751, 16, 10402]
-    }
-]
-
 
 function movieDetails(movie, searchedBy, searchValue) {
     var trailerLink = null;
@@ -45,6 +32,28 @@ function movieDetails(movie, searchedBy, searchValue) {
     movie.genres.forEach(function (genre) {
         Genres.push(genre.title);
     })
+    //dictionary
+    var StreamSources = {};
+    if (movie.subscription_web_sources.length > 0) {
+        movie.subscription_web_sources.forEach(function (stream) {
+            StreamSources[stream.display_name] = stream.link;
+        })
+    }
+    var PaidSources = {};
+    if (movie.purchase_web_sources.length > 0) {
+        movie.purchase_web_sources.forEach(function (stream) {
+            PaidSources[stream.display_name] = stream.link;
+        })
+    }
+    
+    /*//array
+    var PaidSources = [];
+    if (movie.purchase_web_sources.length > 0) {
+        movie.purchase_web_sources.forEach(function (stream) {
+            PaidSources.push(stream.display_name);
+            PaidSources.push(stream.link);
+        })
+    }*/
     //This isn't working on i=0 for some reason
     /*for (var i = 0; i<movie.cast.length; i++){
         Actors.push(movie.cast[i].name);
@@ -57,10 +66,12 @@ function movieDetails(movie, searchedBy, searchValue) {
         Trailer: trailerLink,
         Director: movie.directors[0].name,
         Year: movie.release_year,
-        Actors: Actors, //could do .join(", ")
+        Actors: Actors, //could do .join(", ") if I just wanted a string
         imdbID: movie.imdb,
         Rating: movie.rating,
         Genres: Genres.join(", "),
+        StreamSources: StreamSources,
+        PaidSources: PaidSources,
 
         searchedBy: searchedBy,
         searchValue: searchValue
@@ -73,7 +84,7 @@ function getRandomMovie() {
     var totalResults;
     return guidebox.movies.list({ limit: 1 })
         .then(function (data) {
-            totalResults = data.total_results / 4;
+            totalResults = data.total_results / 10;
             //get the total_results, and randomly generate a number for the offset
             var randOffset = Math.floor(Math.random() * (totalResults - 0) + 0);
             //get that specific movie out of the main list
@@ -136,13 +147,16 @@ function mdbDiscoverMovie(query) {
 function getMoviebyGenre(userGenre) {
     var selectedGenre = genresList[userGenre];
     var rand = selectedGenre[Math.floor(Math.random() * selectedGenre.length)];
-    return mdbDiscoverMovie({ with_genres: rand })
-        .then(function (res) {
+    //IDs in guidebox don't seem as expanise as MovieDB IDs, so limiting to first 10 pages
+    var randPg = Math.floor(Math.random() * (10 - 0) + 0);
+    return mdbDiscoverMovie({ with_genres: rand, page: randPg })
+        /*.then(function (res) {
             var genre = rand;
             var genrePgs = res.total_pages;
             var randPg = Math.floor(Math.random() * (genrePgs - 0) + 0);
             return mdbDiscoverMovie({ with_genres: rand, page: randPg })
-        }).then(function (res) {
+        })*/
+        .then(function (res) {
             var randId = Math.floor(Math.random() * (19 - 0) + 0);
             var movieID = res.results[randId].id;
             return guidebox.search.movies({ field: 'id', id_type: 'themoviedb', query: movieID });
@@ -151,7 +165,7 @@ function getMoviebyGenre(userGenre) {
             var movieID = movie.id;
             return guidebox.movies.retrieve(movieID);
         }).then(function (movie) {
-            return movieDetails(movie);
+            return movieDetails(movie, "genre", userGenre);
         })
 }
 //function works, even if the API isn't good at making a yearSearch
@@ -175,7 +189,7 @@ function getMoviebyYear(userYear) {
             var movieID = movie.id;
             return guidebox.movies.retrieve(movieID);
         }).then(function (movie) {
-            return movieDetails(movie);
+            return movieDetails(movie, "year", userYear);
         })
 }
 /*function getMoviebyYear(userYear, done) {
