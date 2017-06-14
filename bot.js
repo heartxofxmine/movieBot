@@ -30,7 +30,7 @@ var bot = new builder.UniversalBot(connector);
 //Dialog
 bot.dialog('/', function (session) {
     //console.log(moviedetails);
-    session.send('Hi there! I\'m a movie suggestion bot - here to \
+    session.send('Hi there! I\'m FlickPick, a movie suggestion bot - here to \
             help you pick a movie to watch without wasting time searching \
             to choose one! With time I can learn your preferences and will \
             broaden searches!');
@@ -71,10 +71,10 @@ bot.dialog('/Suggestion',
             session.send('May I suggest ' + moviedetails.Title + '?');
             var dynamicButtons =
                 [
-                    builder.CardAction.dialogAction(session, "/Yes", null, "Sure, where can I watch it? "),
-                    builder.CardAction.dialogAction(session, "/Another", null, "No thanks, suggest another "),
+                    builder.CardAction.dialogAction(session, "/Yes", null, "Sure, where can I watch it?"),
+                    builder.CardAction.dialogAction(session, "/Another", null, "No thanks, suggest another"),
                     builder.CardAction.dialogAction(session, "/ActorsinMovie", null, "Who\'s in it?"),
-                    builder.CardAction.openUrl(session, moviedetails.Trailer, 'Watch the trailer')
+                    builder.CardAction.openUrl(session, moviedetails.Trailer, "Watch the trailer")
                 ];
             if (moviedetails.searchedBy === "actor") {
                 dynamicButtons.push(builder.CardAction.dialogAction(session, "/ActorSearch", moviedetails.searchValue, "Give me another with " + moviedetails.searchValue));
@@ -107,7 +107,34 @@ bot.dialog('/Yes',
         if (moviedetails.StreamSources === null && moviedetails.PaidSources === null) {
             session.send("This movie actually isn't available to stream at the moment! Sorry for the tease!");
         } else {
-            if (moviedetails.StreamSources.__proto__.__proto__ != null) {
+            //This code applicable for demo-purposes to just a single partner
+            /*if ("FandangoNOW" in moviedetails.PaidSources) {
+                var suggest = new builder.Message(session)
+                    .attachments([
+                        new builder.ThumbnailCard(session)
+                            .text("You can PURCHASE to watch the movie here")
+                            .buttons([
+                                builder.CardAction.openUrl(session, moviedetails.PaidSources["FandangoNOW"], "FandangoNOW")
+                            ])
+                    ]);
+                session.send(suggest);
+            }
+            if (!("FandangoNOW" in moviedetails.PaidSources)) {
+                var suggest = new builder.Message(session)
+                    .attachments([
+                        //You can't make a hero card itself, it needs to be as part of an attachment
+                        new builder.ThumbnailCard(session)
+                            .text("You can stream the movie here")
+                            .buttons([
+                                builder.CardAction.openUrl(session, "http://www.fandango.com", "FandangoNOW")
+                            ])
+                    ]);
+                session.send(suggest);
+            }*/
+            
+            //moviedetails.Sources isn't null because it's always an element in a full object, 
+            //so have to find its data this way
+            if (Object.keys(moviedetails.StreamSources).length > 0) {
                 session.send("You can stream the movie here:");
                 var StreamButtons = [];
                 Object.keys(moviedetails.StreamSources).forEach(function (source) {
@@ -121,8 +148,8 @@ bot.dialog('/Yes',
                     ]);
                 session.send(suggest);
             }
-            if (moviedetails.PaidSources != null) {
-                session.send("You can RENT the movie here:");
+            if (Object.keys(moviedetails.StreamSources).length > 0) {
+                session.send("You can PURCHASE to watch the movie here");
                 var PaidButtons = [];
                 Object.keys(moviedetails.PaidSources).forEach(function (source) {
                     PaidButtons.push(builder.CardAction.openUrl(session, moviedetails.PaidSources[source], source));
@@ -269,15 +296,20 @@ var buildActorHeroList = function (session, myActors, done) {
         apiHelper.getActorByName(currActor)
             .then(function (actorDetails) {
                 //session.send(actorDetails.Photo + " " + currActor);
-                list.push(
-                    new builder.HeroCard(session)
-                        .title(currActor)
-                        .images([
-                            builder.CardImage.create(session, actorDetails.Photo)
-                        ])
-                        .buttons([
-                            builder.CardAction.dialogAction(session, "/ActorSearch", currActor, "Give me a movie with " + currActor)])
-                );
+                if (actorDetails) {
+                    list.push(
+                        new builder.HeroCard(session)
+                            .title(currActor)
+                            .images([
+                                builder.CardImage.create(session, actorDetails.Photo)
+                            ])
+                            .buttons([
+                                builder.CardAction.dialogAction(session, "/ActorSearch", currActor, "Give me a movie with " + currActor)])
+                    );
+                }
+                else {
+                    console.log("Unable to get info on " + currActor);
+                }
                 count++;
                 if (count >= myActors.length) {
                     done(list);

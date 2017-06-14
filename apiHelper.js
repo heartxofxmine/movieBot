@@ -131,6 +131,10 @@ function getActorByName(actorName) {
             }
             return actorDetails;
         })
+        //data is the error message
+        .catch(function(data){
+            return null;
+        })
 };
 
 //wraps the callback from MDB into a promise
@@ -219,7 +223,7 @@ function getMoviebyYear(userYear) {
 
 */
 
-//A way to make the API call without using the packaging that exists
+//A way to make a Guidebox API call without using the packaging that exists
 /*const getMovies = (callback) => {
     request('http://api-public.guidebox.com/v2/movies?api_key=' + process.env.GUIDEBOX_API_KEY, function (error, response, body) {
         callback(error, response);
