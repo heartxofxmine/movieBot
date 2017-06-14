@@ -29,7 +29,6 @@ var bot = new builder.UniversalBot(connector);
 
 //Dialog
 bot.dialog('/', function (session) {
-    //console.log(moviedetails);
     session.send('Hi there! I\'m FlickPick, a movie suggestion bot - here to \
             help you pick a movie to watch without wasting time searching \
             to choose one! With time I can learn your preferences and will \
@@ -38,23 +37,6 @@ bot.dialog('/', function (session) {
     apiHelper.getRandomMovie().then(function (moviedetails) {
         session.beginDialog("/Suggestion", moviedetails);
     });
-
-    //Use this if the API call isn't working, as this directly calls
-    /*apiHelper.getMovies((error, response) => {
-        if (error) {
-            session.send("error calling API " + error);
-        } else if (response) {
-            var JSONresponse = JSON.parse(response.body);
-            var topMovies = JSONresponse.results;
-            var msg = "";
-            topMovies.forEach(movie => {
-                msg += movie.title + " ";
-            })
-            session.send(msg);
-        } else {
-            session.send("Something went wrong");
-        }
-    })*/
 });
 
 bot.dialog('/Suggestion',
@@ -94,13 +76,13 @@ bot.dialog('/Suggestion',
                         .text(moviedetails.Plot)
                         .images([
                             builder.CardImage.create(session, moviedetails.Poster)
-                        ])
-                        .buttons(dynamicButtons)
-
-                ]);
+                ])
+                .buttons(dynamicButtons)
+            ]);
         }
         session.send(suggest);
-    });
+    }
+);
 
 bot.dialog('/Yes',
     function (session, args) {
@@ -131,7 +113,7 @@ bot.dialog('/Yes',
                     ]);
                 session.send(suggest);
             }*/
-            
+
             //moviedetails.Sources isn't null because it's always an element in a full object, 
             //so have to find its data this way
             if (Object.keys(moviedetails.StreamSources).length > 0) {
@@ -142,7 +124,6 @@ bot.dialog('/Yes',
                 });
                 var suggest = new builder.Message(session)
                     .attachments([
-                        //You can't make a hero card itself, it needs to be as part of an attachment
                         new builder.ThumbnailCard(session)
                             .buttons(StreamButtons)
                     ]);
@@ -156,7 +137,6 @@ bot.dialog('/Yes',
                 });
                 var suggest = new builder.Message(session)
                     .attachments([
-                        //You can't make a hero card itself, it needs to be as part of an attachment
                         new builder.ThumbnailCard(session)
                             .buttons(PaidButtons)
                     ]);
@@ -168,7 +148,6 @@ bot.dialog('/Yes',
 
 bot.dialog('/Another',
     function (session, args) {
-        //session.send("Sure, can I narrow down another suggestion by anything for you?");
         var suggest = new builder.Message(session)
             .attachments([
                 new builder.ThumbnailCard(session)
@@ -186,7 +165,7 @@ bot.dialog('/Another',
 
 bot.dialog('/ActorSearch',
     //If the user wants another movie by same actor, route to here, 
-    //but skip first step in waterfall. still need to keep the query though, 
+    //but skip first step in waterfall. Still need to keep the query though, 
     //saving the response args.data
     [function (session, args, next) {
         if (args && args.data) {
@@ -205,16 +184,6 @@ bot.dialog('/ActorSearch',
                 session.send("Please remove your gloves, type again ;-)")
                 session.replaceDialog("/ActorSearch");
             });
-
-        /*        apiHelper.getMovieByActor(actorName, function (movie) {
-                    if (movie !== null) {
-                        session.replaceDialog("/Suggestion", movie);
-                    }
-                    else {
-                        session.send("Please remove your gloves, type again ;-)")
-                        session.replaceDialog("/ActorSearch");
-                    }
-                });*/
     }]
 );
 
@@ -237,7 +206,6 @@ bot.dialog('/GenreSearch',
 
             var suggest = new builder.Message(session)
                 .attachments([
-                    //You can't make a hero card itself, it needs to be as part of an attachment
                     new builder.ThumbnailCard(session)
                         .buttons(genreButtons)
                 ]);
@@ -254,7 +222,8 @@ bot.dialog('/GenreSearch',
                 session.replaceDialog("/GenreSearch");
             });
     }
-    ]);
+    ]
+);
 
 bot.dialog('/YearSearch',
     [function (session, args, next) {
@@ -295,7 +264,6 @@ var buildActorHeroList = function (session, myActors, done) {
         let currActor = myActors[i];
         apiHelper.getActorByName(currActor)
             .then(function (actorDetails) {
-                //session.send(actorDetails.Photo + " " + currActor);
                 if (actorDetails) {
                     list.push(
                         new builder.HeroCard(session)
@@ -324,8 +292,6 @@ bot.dialog('/ActorsinMovie',
         buildActorHeroList(session, myActors, function (actorHeroCardList) {
 
             var actors = new builder.Message(session)
-                //For some reason this line keeps breaking other code, wait to use Adaptive Cards
-                //.text("These are the main actors for " + moviedetails.Title)
                 .attachmentLayout(builder.AttachmentLayout.carousel)
                 .attachments(actorHeroCardList);
 
@@ -340,7 +306,6 @@ bot.dialog('/ActorsinMovie',
             }
             var suggest = new builder.Message(session)
                 .attachments([
-                    //You can't make a hero card itself, it needs to be as part of an attachment
                     new builder.ThumbnailCard(session)
                         .text("Would you like to watch this?")
                         .buttons(dynamicActorButtons)
