@@ -41,3 +41,4 @@ jspm_packages
 .env
 *.old.js
 To-Dos.txt
+testing/
