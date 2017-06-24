@@ -53,10 +53,10 @@ bot.dialog('/Suggestion',
             session.send('May I suggest ' + moviedetails.Title + '?');
             var dynamicButtons =
                 [
-                    builder.CardAction.dialogAction(session, "/Yes", null, "Sure, where can I watch it?"),
-                    builder.CardAction.dialogAction(session, "/Another", null, "No thanks, suggest another"),
                     builder.CardAction.dialogAction(session, "/ActorsinMovie", null, "Who\'s in it?"),
-                    builder.CardAction.openUrl(session, moviedetails.Trailer, "Watch the trailer")
+                    builder.CardAction.openUrl(session, moviedetails.Trailer, "Watch the trailer"),
+                    builder.CardAction.dialogAction(session, "/Yes", null, "Sure, where can I watch it?"),
+                    builder.CardAction.dialogAction(session, "/Another", null, "No thanks, suggest another")
                 ];
             if (moviedetails.searchedBy === "actor") {
                 dynamicButtons.push(builder.CardAction.dialogAction(session, "/ActorSearch", moviedetails.searchValue, "Give me another with " + moviedetails.searchValue));
@@ -86,8 +86,9 @@ bot.dialog('/Suggestion',
 
 bot.dialog('/Yes',
     function (session, args) {
-        if (moviedetails.StreamSources === null && moviedetails.PaidSources === null) {
-            session.send("This movie actually isn't available to stream at the moment! Sorry for the tease!");
+        if (Object.keys(moviedetails.StreamSources).length == 0 && Object.keys(moviedetails.PaidSources).length == 0) {
+            session.send("This movie actually isn't available to stream at the moment! Sorry for being such a tease!");
+            //session.beginDialog('/Suggestion');
         } else {
             //This code applicable for demo-purposes to just a single partner
             /*if ("FandangoNOW" in moviedetails.PaidSources) {
@@ -117,7 +118,6 @@ bot.dialog('/Yes',
             //moviedetails.Sources isn't null because it's always an element in a full object, 
             //so have to find its data this way
             if (Object.keys(moviedetails.StreamSources).length > 0) {
-                session.send("You can stream the movie here:");
                 var StreamButtons = [];
                 Object.keys(moviedetails.StreamSources).forEach(function (source) {
                     StreamButtons.push(builder.CardAction.openUrl(session, moviedetails.StreamSources[source], source));
@@ -125,12 +125,12 @@ bot.dialog('/Yes',
                 var suggest = new builder.Message(session)
                     .attachments([
                         new builder.ThumbnailCard(session)
+                            .title("You can stream the movie here:")
                             .buttons(StreamButtons)
                     ]);
                 session.send(suggest);
             }
-            if (Object.keys(moviedetails.StreamSources).length > 0) {
-                session.send("You can PURCHASE to watch the movie here");
+            if (Object.keys(moviedetails.PaidSources).length > 0) {
                 var PaidButtons = [];
                 Object.keys(moviedetails.PaidSources).forEach(function (source) {
                     PaidButtons.push(builder.CardAction.openUrl(session, moviedetails.PaidSources[source], source));
@@ -138,6 +138,7 @@ bot.dialog('/Yes',
                 var suggest = new builder.Message(session)
                     .attachments([
                         new builder.ThumbnailCard(session)
+                            .title("You can rent/buy the movie here")
                             .buttons(PaidButtons)
                     ]);
                 session.send(suggest);
