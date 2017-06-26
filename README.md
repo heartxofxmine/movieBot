@@ -73,30 +73,3 @@ Implementing this bot as a Cortana skill could drive engagement with adding enga
 [Adobe XD Proof of Concept](https://xd.adobe.com/view/6b5d8575-0ed2-484d-af3b-ff5e7e717069/?featureset=0.6.15)
 
 [Provide Your Experiences with Streaming](https://www.surveymonkey.com/r/GSHC5M2)
-
-
-
-
-## Description
-    Why I did this.
-    What's the idea of the bot
-## Features
-    What I have : Search, random suggestion, etc
-    What I want to do:
-
-
-Not as people can use twitter, but that twitter can be an internet of things. pivot the convo about being about twitter, but rather pivot twitter to be about using major analytics.
-here i'm connecting to public apis and leveraging that, but here's the power of combining multiple apis
-the way i connected things, the different pieces i used, can be matched to numerous companies and disciplines. 
-listen, i have an example where i did that movie data. here's how i connected it. 
-here's why i chose this mthod, over another method. well id idn't know about that, or i did think about it, but chose this over another because of certain conditions.
-
-If I had my own API and wanted to use this bot, how would I implement it.
-What's hardcoded, what's not?
-What lives in what files?
-The dialogs are here, the apihelpers is here and does this. etc
-
-steps to deploy, steps 
-clone it, create an env with the following keys, 
-here's how you'd install it, email me for more information.
-this codes contains commented out samples to filter specific partners to specific services. 
